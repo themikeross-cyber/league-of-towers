@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>League of Towers</title>
+  <meta name="description" content="A five-round lane defense. Place champions, start each wave, and keep the nexus standing.">
+  <style>
+    :root {
+      --bg: #121410;
+      --panel: #1c2118;
+      --panel-2: #262b20;
+      --ink: #f3ead8;
+      --muted: #b7ad96;
+      --line: #3a4032;
+      --gold: #e0b15a;
+      --gold-ink: #2a210f;
+      --danger: #e15d4f;
+      --good: #8fbf73;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      line-height: 1.4;
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+    }
+
+    .mark {
+      width: 36px;
+      height: 4px;
+      border-radius: 99px;
+      background: var(--gold);
+    }
+
+    h1 {
+      margin: 14px 0 8px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 42px;
+      font-weight: normal;
+      letter-spacing: -0.03em;
+    }
+
+    .lede {
+      max-width: 68ch;
+      margin: 0 0 8px;
+      color: var(--muted);
+    }
+
+    .help {
+      max-width: 72ch;
+      margin: 0 0 18px;
+      color: var(--ink);
+    }
+
+    kbd {
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--gold);
+      border: 1px solid var(--line);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      padding: 0 5px;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 22px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .section-label {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .shop {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .tower-btn {
+      text-align: left;
+      background: var(--panel);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 10px 10px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-height: 112px;
+      box-shadow: inset 3px 0 0 var(--swatch, var(--gold));
+    }
+
+    .tower-btn:hover { background: var(--panel-2); }
+
+    .tower-btn.is-selected {
+      border-color: var(--gold);
+      background: #2a2e22;
+    }
+
+    .tower-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tower-name { font-weight: 700; }
+
+    .tower-cost {
+      color: var(--gold);
+      font-size: 13px;
+    }
+
+    .tower-blurb {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .preview {
+      min-height: 1.4em;
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .board {
+      position: relative;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: #0c1410;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .summary {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(8, 12, 9, 0.78);
+      border-radius: 8px;
+    }
+
+    .summary[hidden] { display: none; }
+
+    .summary-card {
+      width: min(420px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 22px 22px 18px;
+    }
+
+    .summary .kicker {
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .is-victory .kicker { color: var(--good); }
+    .is-defeat .kicker { color: var(--danger); }
+
+    .summary h2 {
+      margin: 6px 0 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 32px;
+      font-weight: normal;
+    }
+
+    .summary-stats {
+      list-style: none;
+      margin: 16px 0;
+      padding: 0;
+    }
+
+    .summary-stats li {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .summary-stats span { color: var(--muted); }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 4px 0 10px;
+    }
+
+    button { font: inherit; }
+
+    .start-btn,
+    .restart-btn,
+    .summary .start-btn {
+      border-radius: 8px;
+      padding: 12px 16px;
+      cursor: pointer;
+    }
+
+    .start-btn {
+      background: var(--gold);
+      color: var(--gold-ink);
+      border: 0;
+      font-weight: 700;
+    }
+
+    .restart-btn {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .status {
+      flex: 1 1 280px;
+      margin: 0;
+      color: var(--ink);
+    }
+
+    .foot {
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 860px) {
+      .shop { grid-template-columns: 1fr 1fr; }
+      h1 { font-size: 34px; }
+    }
+
+    @media (max-width: 560px) {
+      .hud,
+      .shop { grid-template-columns: 1fr 1fr; }
+      .wrap { padding: 18px 12px 32px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="mark"></div>
+    <h1>League of Towers</h1>
+    <p class="lede">Place champions along a single lane, then hold the nexus for five rounds. Towers attack on their own. Waves are short, so a full run can finish in under two minutes.</p>
+    <p class="help">Press <kbd>1</kbd>–<kbd>5</kbd> to pick a champion, click the lane to place them, then hit Start Round. Right-click a champion between rounds to sell them for a full refund.</p>
+
+    <div class="hud" aria-label="Match status">
+      <div class="stat"><span>Lives</span><strong id="lives">12</strong></div>
+      <div class="stat"><span>Round</span><strong id="round">1 / 5</strong></div>
+      <div class="stat"><span>Score</span><strong id="score">0</strong></div>
+      <div class="stat"><span>Gold</span><strong id="gold">120</strong></div>
+    </div>
+
+    <h2 class="section-label">Champions</h2>
+    <div id="shop" class="shop" role="group" aria-label="Champion types"></div>
+    <p id="preview" class="preview"></p>
+
+    <div class="controls">
+      <button type="button" class="start-btn" id="start-round">Start Round 1</button>
+      <button type="button" class="restart-btn" id="restart">Restart</button>
+      <p id="status" class="status" role="status"></p>
+    </div>
+
+    <div class="board">
+      <canvas id="board" width="900" height="500" aria-label="Defense lane. Click near the path to place the selected champion."></canvas>
+      <div id="summary" class="summary" hidden role="dialog" aria-modal="true" aria-labelledby="summary-title">
+        <div class="summary-card">
+          <p id="summary-kicker" class="kicker"></p>
+          <h2 id="summary-title"></h2>
+          <ul id="summary-stats" class="summary-stats"></ul>
+          <button type="button" class="start-btn" id="summary-restart">Play again</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="foot">School project. Champion names are tower ideas for class. Not affiliated with Riot Games.</p>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
